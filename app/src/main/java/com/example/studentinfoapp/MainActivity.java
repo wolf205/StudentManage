@@ -18,70 +18,66 @@ public class MainActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
     private TaskAdapter adapter;
-    private List<Task> currentTasks; // Biến toàn cục để lưu danh sách hiện tại
+    private List<Task> currentTasks;
 
-    // 1. KHÔI PHỤC: Lắng nghe kết quả trả về từ AddTaskActivity
+    // Lắng nghe kết quả từ AddTaskActivity
     private final ActivityResultLauncher<Intent> addTaskLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     Intent data = result.getData();
-
-                    // Lấy dữ liệu từ AddTaskActivity truyền về
                     String title = data.getStringExtra("new_title");
                     String dueDate = data.getStringExtra("new_due_date");
                     String priorityStr = data.getStringExtra("new_priority");
-                    boolean isCompleted = data.getBooleanExtra("is_completed", false);
 
-                    // Chuyển đổi chuỗi priority thành số
-                    int priority = 3; // Low mặc định
+                    int priority = 3;
                     if ("High".equals(priorityStr)) priority = 1;
                     else if ("Medium".equals(priorityStr)) priority = 2;
 
-                    // Tạo ID giả (Trong thực tế Database sẽ lo việc này)
                     int newId = currentTasks.isEmpty() ? 1 : currentTasks.get(currentTasks.size() - 1).getId() + 1;
+                    Task newTask = new Task(newId, title, dueDate, priority, false);
 
-                    // Tạo Task mới và thêm vào danh sách
-                    Task newTask = new Task(newId, title, dueDate, priority, isCompleted);
                     currentTasks.add(newTask);
-
-                    // Cập nhật lại Adapter (Phải truyền 1 List mới để DiffUtil nhận diện thay đổi)
                     adapter.updateTasks(new ArrayList<>(currentTasks));
-
                     Toast.makeText(this, "Đã thêm: " + title, Toast.LENGTH_SHORT).show();
                 }
             });
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // 1. Ánh xạ View
         recyclerView = findViewById(R.id.recyclerView);
+        FloatingActionButton fab = findViewById(R.id.fabAdd);
+
+        // 2. Thiết lập LayoutManager
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        // 1. Chuẩn bị dữ liệu danh sách
+        // 3. Chuẩn bị dữ liệu ban đầu
         currentTasks = new ArrayList<>();
         currentTasks.add(new Task(1, "Học RecyclerView", "15/04/2026", 1, false));
-        currentTasks.add(new Task(2, "Làm bài tập Android", "20/04/2026", 2, true));
+        currentTasks.add(new Task(2, "Làm bài thực hành Lab 07", "20/04/2026", 2, true));
 
-        // 2. KHỞI TẠO ADAPTER TRƯỚC (Quan trọng)
-        adapter = new TaskAdapter(currentTasks, task -> {
+        // 4. KHỞI TẠO ADAPTER TRƯỚC (Sửa lỗi NullPointerException)
+        adapter = new TaskAdapter(task -> {
+            // Thống nhất Key truyền dữ liệu sang TaskDetailActivity
             Intent intent = new Intent(MainActivity.this, TaskDetailActivity.class);
             intent.putExtra("task_id", task.getId());
+            intent.putExtra("task_title", task.getTitle());
+            intent.putExtra("task_date", task.getDueDate());
+            intent.putExtra("task_priority", task.getPriority());
+            intent.putExtra("task_status", task.isCompleted());
             startActivity(intent);
         });
 
-        // 3. GÁN ADAPTER VÀO RECYCLERVIEW
+        // 5. Gán Adapter và cập nhật dữ liệu
         recyclerView.setAdapter(adapter);
-
-        // 4. BÂY GIỜ MỚI GỌI CÁC PHƯƠNG THỨC CỦA ADAPTER
         adapter.updateTasks(new ArrayList<>(currentTasks));
 
+        // 6. Các tính năng bổ sung
         setupSwipeToDelete();
-
-        FloatingActionButton fab = findViewById(R.id.fabAdd);
         fab.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, AddTaskActivity.class);
             addTaskLauncher.launch(intent);
@@ -99,16 +95,11 @@ public class MainActivity extends AppCompatActivity {
             public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
                 int position = viewHolder.getAdapterPosition();
                 Task deletedTask = adapter.getTaskAt(position);
-
-                // Xóa khỏi danh sách gốc và adapter
                 currentTasks.remove(deletedTask);
                 adapter.removeTask(position);
-
                 Toast.makeText(MainActivity.this, "Đã xóa: " + deletedTask.getTitle(), Toast.LENGTH_SHORT).show();
             }
         };
-
-        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(simpleCallback);
-        itemTouchHelper.attachToRecyclerView(recyclerView);
+        new ItemTouchHelper(simpleCallback).attachToRecyclerView(recyclerView);
     }
 }
