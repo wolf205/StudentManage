@@ -52,33 +52,35 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         recyclerView = findViewById(R.id.recyclerView);
-
-        // Thiết lập LayoutManager
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        // Khởi tạo Adapter và bắt sự kiện click
-        adapter = new TaskAdapter(task -> {
-            Toast.makeText(this, "Clicked: " + task.getTitle(), Toast.LENGTH_SHORT).show();
-            // Nơi này sau này sẽ gọi Intent/Fragment để mở TaskDetail
-        });
-        recyclerView.setAdapter(adapter);
-
-        // Nạp dữ liệu giả (Dummy Data) ban đầu
+        // 1. Chuẩn bị dữ liệu danh sách
         currentTasks = new ArrayList<>();
         currentTasks.add(new Task(1, "Học RecyclerView", "15/04/2026", 1, false));
         currentTasks.add(new Task(2, "Làm bài tập Android", "20/04/2026", 2, true));
+
+        // 2. KHỞI TẠO ADAPTER TRƯỚC (Quan trọng)
+        adapter = new TaskAdapter(currentTasks, task -> {
+            Intent intent = new Intent(MainActivity.this, TaskDetailActivity.class);
+            intent.putExtra("task_id", task.getId());
+            startActivity(intent);
+        });
+
+        // 3. GÁN ADAPTER VÀO RECYCLERVIEW
+        recyclerView.setAdapter(adapter);
+
+        // 4. BÂY GIỜ MỚI GỌI CÁC PHƯƠNG THỨC CỦA ADAPTER
         adapter.updateTasks(new ArrayList<>(currentTasks));
 
-        // Tích hợp Swipe-to-Delete
         setupSwipeToDelete();
 
-        // 2. KHÔI PHỤC: Bắt sự kiện click cho nút thêm mới (FAB)
         FloatingActionButton fab = findViewById(R.id.fabAdd);
         fab.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, AddTaskActivity.class);
